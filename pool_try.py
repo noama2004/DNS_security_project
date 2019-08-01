@@ -24,7 +24,7 @@ def get_simple_cmd_output(cmd, stderr=STDOUT):
     return str(Popen(args, stdout=PIPE, stderr=stderr).communicate()[0])
 
 
-def get_ping_time(host):
+def get_ping_time_winsows(host):
     cmd = "ping {host}".format(host=host)
     ping_res_str = get_simple_cmd_output(cmd)
     return int(ping_res_str.split()[-1].replace("ms\\r\\n'", ""))
@@ -186,6 +186,15 @@ def print_ips_per_site_bar(ips_list, site):
     plt.ylabel('counter')
     plt.show()
 
+def get_ping_time_linux(host):
+    cmd = "ping {host} -c 3".format(host=host)
+    result = str(get_simple_cmd_output(cmd))
+    avg_time = result.split('/')[-3]
+    if len(avg_time) > 0:
+        return avg_time
+    else:
+        raise Exception('could not get ping time!')
+
 
 
 def get_sites_ips(resolvers_ips):
@@ -290,8 +299,8 @@ def main():
         def_res_time = []
     print_amount_of_reslovers_time_comparison(def_resolver_time_vs_each_amount_of_resolvers, time_per_amount_of_resolvers)
     for i in range(len(most_common_ip_list)):
-        majority_ping_latency.append(get_ping_time(most_common_ip_list[i]))
-        def_ping_latency.append(get_ping_time(def_resolver_ips_list[i]))
+        majority_ping_latency.append(get_ping_time_linux(most_common_ip_list[i]))
+        def_ping_latency.append(get_ping_time_linux(def_resolver_ips_list[i]))
     print_ping_comparison(majority_ping_latency, def_ping_latency)
 
 

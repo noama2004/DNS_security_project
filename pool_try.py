@@ -14,6 +14,19 @@ import collections
 import itertools
 import shlex
 from subprocess import Popen, PIPE, STDOUT
+import sys
+
+
+def get_platform():
+    platforms = {
+        'linux1': 'Linux',
+        'linux2': 'Linux',
+        'darwin': 'OS X',
+        'win32': 'Windows'
+    }
+    if sys.platform not in platforms:
+        return sys.platform
+    return platforms[sys.platform]
 
 
 def get_simple_cmd_output(cmd, stderr=STDOUT):
@@ -153,7 +166,9 @@ def print_resolvers_time_comparison_on_general(amount_of_resolvers):
             [np.mean(other_res_time)] + [np.mean(def_res_time)])
     plt.ylabel('seconds')
     plt.title('RTT comparison results {0} resolvers VS default resolver'.format(amount_of_resolvers))
+    plt.savefig('resolvers_time_comparison_on_general.png')
     plt.show()
+
 
 def print_amount_of_reslovers_time_comparison(resolvers_time, def_resolver_time):
     plt.plot(range(10, 101, 20), resolvers_time)
@@ -161,30 +176,35 @@ def print_amount_of_reslovers_time_comparison(resolvers_time, def_resolver_time)
     plt.ylabel('seconds')
     plt.xlabel('amount of resolvers')
     plt.title('time comparison between the default resolver \n to X amount of public DNS\'s')
+    plt.savefig('reslovers_time_comparison.png')
     plt.show()
+
 
 def print_ping_comparison(def_ping_time, majority_ping_time):
     plt.bar(['majority ip'] + ["default resolver ip"],
             [np.mean(def_ping_time)] + [np.mean(majority_ping_time)])
     plt.ylabel('Ms')
     plt.title('latency of pings to ips from the majority \nof the DNS resolvers compare to default resolver')
+    plt.savefig('ping_comparison.png')
     plt.show()
 
 
-def print_resolvers_time_comparison_per_site(site, dns_rtt_list, def_resolver_time):
-    plt.bar(['sum of all', 'other resolvers mean'] + ["default resolver"], [np.sum(dns_rtt_list)] +
-            [np.mean(dns_rtt_list)] + [def_resolver_time])
-    plt.ylabel('dns RTT (time units')
-    plt.title('RTT comparison results for the site: {0}'.format(site))
-    plt.show()
+# def print_resolvers_time_comparison_per_site(site, dns_rtt_list, def_resolver_time):
+#     plt.bar(['sum of all', 'other resolvers mean'] + ["default resolver"], [np.sum(dns_rtt_list)] +
+#             [np.mean(dns_rtt_list)] + [def_resolver_time])
+#     plt.ylabel('dns RTT (time units')
+#     plt.title('RTT comparison results for the site: {0}'.format(site))
+#
+#     plt.show()
 
 
-def print_ips_per_site_bar(ips_list, site):
-    ips_plot = pd.Series(ips_list).value_counts().plot('bar', title='amount results per ip os site: {0}'.format(site))
-    ips_plot.plot()
-    plt.xlabel('ips')
-    plt.ylabel('counter')
-    plt.show()
+# def print_ips_per_site_bar(ips_list, site):
+#     ips_plot = pd.Series(ips_list).value_counts().plot('bar', title='amount results per ip os site: {0}'.format(site))
+#     ips_plot.plot()
+#     plt.xlabel('ips')
+#     plt.ylabel('counter')
+#     plt.show()
+
 
 def get_ping_time_linux(host):
     cmd = "ping {host} -c 3".format(host=host)
@@ -194,7 +214,6 @@ def get_ping_time_linux(host):
         return avg_time
     else:
         raise Exception('could not get ping time!')
-
 
 
 def get_sites_ips(resolvers_ips):
@@ -280,27 +299,34 @@ def resolve_dns_parallel(site, resolver_ips):
 def main():
     global def_res_time
     global other_res_time
+    global ping_func
+    if get_platform() == "Linux":
+        ping_func = lambda a: get_ping_time_linux(a)
+    else:  # windows case
+        ping_func = lambda a: get_ping_time_winsows(a)
     def_res_time = []
     other_res_time = []
     def_ping_latency = []
     majority_ping_latency = []
     time_per_amount_of_resolvers = []
     def_resolver_time_vs_each_amount_of_resolvers = []
-    for amount_of_resolvers in range(10, 101,  20):
+    for amount_of_resolvers in range(10, 101, 100):
         print("check comparison with {0} DNS servers".format(amount_of_resolvers))
         for i in range(4):
-            resolver_ips = get_resolver_map(r"C:\Users\1212\Desktop\studies\third year\semester b\lab\dns_scrypts\try.csv",
-                                            amount_of_resolvers)
+            resolver_ips = get_resolver_map(
+                r"C:\Users\1212\Desktop\studies\third year\semester b\lab\dns_scrypts\try.csv",
+                amount_of_resolvers)
             most_common_ip_list, def_resolver_ips_list = get_sites_ips(resolver_ips)
         print_resolvers_time_comparison_on_general(amount_of_resolvers)
         time_per_amount_of_resolvers.append(np.mean(other_res_time))
         def_resolver_time_vs_each_amount_of_resolvers.append(np.mean(def_res_time))
         other_res_time = []
         def_res_time = []
-    print_amount_of_reslovers_time_comparison(def_resolver_time_vs_each_amount_of_resolvers, time_per_amount_of_resolvers)
+    print_amount_of_reslovers_time_comparison(def_resolver_time_vs_each_amount_of_resolvers,
+                                              time_per_amount_of_resolvers)
     for i in range(len(most_common_ip_list)):
-        majority_ping_latency.append(get_ping_time_linux(most_common_ip_list[i]))
-        def_ping_latency.append(get_ping_time_linux(def_resolver_ips_list[i]))
+        majority_ping_latency.append(ping_func(most_common_ip_list[i]))
+        def_ping_latency.append(ping_func(def_resolver_ips_list[i]))
     print_ping_comparison(majority_ping_latency, def_ping_latency)
 
 

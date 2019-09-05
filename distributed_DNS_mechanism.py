@@ -229,7 +229,7 @@ def print_ips_per_site_bar(ips_list, site):
     plt.show()
 
 
-def get_sites_ips(resolvers_ips):
+def get_sites_ips(resolvers_ips, alpha=0.5):
     """
     The function get ips of resolvers and output a graph with RTT comparison between the resolvers to the default
     resolvers.
@@ -263,7 +263,6 @@ def get_sites_ips(resolvers_ips):
     except dns.exception.Timeout or dns.resolver.NoNameservers:
         time_for_default_resolvers = 1
         pass
-
     print("the mean majority of the most common ip is: {0}".format(np.mean(majority_ip_list)))
     def_res_time.append(time_for_default_resolvers)
     public_res_time.append(np.mean(time_for_all_resolvers))
